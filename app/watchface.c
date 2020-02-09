@@ -10,50 +10,69 @@
 #include "tetris.h"
 #include "pah8002.h"
 #include "status.h"
+#include "weather.h"
+#include "screen_mgr.h"
 
-static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
-static const nrf_gfx_font_desc_t * p_digit_font = &dSEG7ClassicMini_32ptFontInfo;
+static const nrf_gfx_font_desc_t * p_font = &m1cthin_12ptFontInfo;
+static const nrf_gfx_font_desc_t * p_digit_font = &m1mn_48ptFontInfo;
+static const nrf_gfx_font_desc_t * p_weather_font = &m1c_18ptbFontInfo;
+static const nrf_gfx_font_desc_t * p_weather_font_small = &m1c_14ptbFontInfo;
 static const nrf_lcd_t * p_lcd = &nrf_lcd_lpm013m126a;
 
 static char time_str[32];
+struct tm previous_time;
 
-void draw_watchface(void) {
+void watchface_process(void){
 
-//    lcd_clear(BLACK);
-	nrf_gfx_point_t text_start = NRF_GFX_POINT(16,54);
+	if (previous_time.tm_hour!=time_date.tm_hour){
+		screen_redraw_request();
+	}
+	else if (previous_time.tm_min!=time_date.tm_min){
+		screen_redraw_request();
+	}
+
+	previous_time=time_date;
+}
+
+void watchface_draw(void) {
+	lcd_clear(WHITE);
+
+	nrf_gfx_point_t digits_start = NRF_GFX_POINT(32,30);
+	nrf_gfx_point_t date_start = NRF_GFX_POINT(32,90);
 
 	snprintf(time_str, sizeof(time_str), "%02d:%02d", time_date.tm_hour,
 			time_date.tm_min);
-	nrf_gfx_print(p_lcd, &text_start, BLUE, time_str, p_digit_font, true);
+	nrf_gfx_print(p_lcd, &digits_start, BLACK, time_str, p_digit_font, true);
 
 //    asctime_r(&time_date,time_str);
 //    sprintf(time_str,"%u\n%u", (uint)current_time, (uint)ticks_acc);
 	strftime(time_str, sizeof(time_str), "%a %d.%m.%Y", &time_date);
-	text_start.y += 56;
-	text_start.x = 32;
-	nrf_gfx_print(p_lcd, &text_start, WHITE, time_str, p_font, true);
+	nrf_gfx_print(p_lcd, &date_start, BLACK, time_str, p_font, true);
 
-	text_start.y += 16;
-	int voltage = battery_get_voltage();
-	int vd = voltage / 1000;
-	int vf = voltage / 10 % 100;
-//    snprintf(time_str,sizeof(time_str),"battery: %01d.%02dV",vd,vf);
-//    snprintf(time_str,sizeof(time_str),"battery: %d",battery_get_percent());
-//    nrf_gfx_print(p_lcd, &text_start, WHITE, time_str, p_font, true);
+	nrf_gfx_rect_t weather_bg=NRF_GFX_RECT(0,120,LCD_WIDTH,76);
+	nrf_gfx_rect_draw(p_lcd,&weather_bg,0,BLACK,true);
 
-//    text_start.y+=16;
-//    snprintf(time_str,sizeof(time_str),"pah8002: %x",pah8002_get_status());
-//    nrf_gfx_print(p_lcd, &text_start, WHITE, time_str, p_font, true);
-//
-//    text_start.y+=16;
-//    snprintf(time_str,sizeof(time_str),"HR: %.2f",pah8002_hr());
-//    nrf_gfx_print(p_lcd, &text_start, WHITE, time_str, p_font, true);
+	nrf_gfx_point_t temperature_start = NRF_GFX_POINT(64,128);
+	nrf_gfx_point_t temperature_max_start = NRF_GFX_POINT(120,124);
+	nrf_gfx_point_t temperature_min_start = NRF_GFX_POINT(120,146);
 
-//    lcd_draw_icon(0,0, ICON_HEART_BIG);
-	nrf_gfx_display(p_lcd);
+	lcd_draw_icon(24, 128, weather_icons[WEATHER_SUN_CLOUD]);
+
+	snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature);
+	nrf_gfx_print(p_lcd, &temperature_start, WHITE, time_str, p_weather_font, true);
+
+	snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature_max);
+	nrf_gfx_print(p_lcd, &temperature_max_start, WHITE, time_str, p_weather_font_small, true);
+	snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature_min);
+	nrf_gfx_print(p_lcd, &temperature_min_start, WHITE, time_str, p_weather_font_small, true);
+
+//	nrf_gfx_display(p_lcd);
 }
 
 void draw_statusbar(uint8_t draw_time) {
+
+	nrf_gfx_rect_t statusbar_bg=NRF_GFX_RECT(0,0,LCD_WIDTH,20);
+	nrf_gfx_rect_draw(p_lcd,&statusbar_bg,0,BLACK,true);
 
 	nrf_gfx_point_t text_start = NRF_GFX_POINT(72, 2);
 
@@ -107,4 +126,12 @@ void watchface_handler(void *p_context) {
 
 void watchface_handle_button_evt(button_event_t *evt) {
 
+	if (evt->button == BUTTON_UP && evt->press_type == LONG_PRESS) {
+		screen_switch(APPLET_MUSIC);
+	}
+	else if (evt->button == BUTTON_OK && evt->press_type == SHORT_PRESS_RELEASE) {
+		screen_switch(APPLET_MENU);
+	}
+
+	screen_redraw_request();
 }

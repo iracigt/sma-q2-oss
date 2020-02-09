@@ -36,8 +36,10 @@
 #include "pah8series_api_c.h"
 #include "pah8002.h"
 #include "app_hrm.h"
+#include "app_music.h"
 #include "nrf_rtc.h"
 #include "hrm.h"
+#include "screen_mgr.h"
 
 #define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
@@ -45,20 +47,9 @@
 static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
 static const nrf_lcd_t * p_lcd = &nrf_lcd_lpm013m126a;
 
-enum applet_id{
-	APPLET_WATCHFACE,
-	APPLET_TETRIS,
-	APPLET_HRM
-};
 
-applet_t applets[]={
-		{APPLET_WATCHFACE,draw_watchface,watchface_handle_button_evt},
-		{APPLET_TETRIS,draw_tetris,tetris_handle_button_evt},
-		{APPLET_HRM,draw_hrm,hrm_handle_button_evt}
 
-};
-
-applet_t *current_applet=&applets[0];
+//applet_t *current_applet=&applets[0];
 
 uint8_t start_hrm=0;
 
@@ -79,6 +70,14 @@ TimerHandle_t battery_timer = NULL;
 void battery_timer_callback( TimerHandle_t pxTimer ){
 
     battery_sample();
+
+}
+
+TimerHandle_t battery_history_timer = NULL;
+
+void battery_history_timer_callback( TimerHandle_t pxTimer ){
+
+    battery_save_history();
 
 }
 
@@ -186,72 +185,53 @@ static TaskHandle_t  button_task;
 static TaskHandle_t  time_task;
 static TaskHandle_t  watchface_task;
 static TaskHandle_t  vibration_task;
-static TaskHandle_t  hrm_task;
+TaskHandle_t  hrm_task;
 
-static void watchface_task_handler(void * arg){
+static void watchface_task_handler(void * arg) {
 
-	 TickType_t xLastWakeTime;
-	 TickType_t delay = 100;
+	TickType_t xLastWakeTime;
+	TickType_t delay = 50;
 
-    lcd_com_timer = xTimerCreate("lcd_com",1000,pdTRUE,0,lcd_com_timer_callback);
-    xTimerStart(lcd_com_timer,portMAX_DELAY);
-    battery_timer = xTimerCreate("battery",5000,pdTRUE,0,battery_timer_callback);
-    xTimerStart(battery_timer,portMAX_DELAY);
+	lcd_com_timer = xTimerCreate("lcd_com", 1000, pdTRUE, 0,
+			lcd_com_timer_callback);
+	xTimerStart(lcd_com_timer, portMAX_DELAY);
+	// Measure battery voltage every minute
+	battery_timer = xTimerCreate("battery", 60000, pdTRUE, 0,
+			battery_timer_callback);
+	xTimerStart(battery_timer, portMAX_DELAY);
+	// Save battery charge every 30 min to make a graph
+	battery_history_timer = xTimerCreate("batteryh", 1000*1800, pdTRUE, 0,
+			battery_history_timer_callback);
+	xTimerStart(battery_history_timer, portMAX_DELAY);
+	battery_sample();
 
-    uint8_t random[1];
-    vTaskDelay(500);
-    sd_rand_application_vector_get(random,1);
-    srand48(random[0]);
-    button_event_t evt;
+	screen_mgr_init();
 
-    xLastWakeTime = xTaskGetTickCount();
+	uint8_t random[1];
+	vTaskDelay(500);
+	sd_rand_application_vector_get(random, 1);
+	srand48(random[0]);
+	button_event_t evt;
 
-	for(;;){
+	xLastWakeTime = xTaskGetTickCount();
+
+	for (;;) {
 		nrf_wdt_reload_request_set(NRF_WDT_RR0);
 
-		if (xQueueReceive(button_evt_queue, &evt, (TickType_t ) 0)) {
+		if (xQueueReceive(button_evt_queue, &evt, (TickType_t) 0)) {
 			backlight_on();
 
-			if (evt.press_type==LONG_PRESS){
-			vibration_short();
+			if (evt.press_type == LONG_PRESS) {
+				vibration_short();
 			}
 
-			if (evt.button == BUTTON_OK && evt.press_type == LONG_PRESS) {
-				vTaskGetRunTimeStats(stats_buffer);
-				puts(stats_buffer);
-			}
+			screen_handle_button_evt(&evt);
 
-			if (evt.button == BUTTON_DOWN && evt.press_type == LONG_PRESS) {
-				current_applet = &applets[APPLET_TETRIS];
-			}
-
-			if (evt.button == BUTTON_BACK && evt.press_type == LONG_PRESS) {
-				xTaskNotify(hrm_task,HRM_STOP,eSetValueWithOverwrite);
-				current_applet = &applets[APPLET_WATCHFACE];
-			}
-
-			if (evt.button == BUTTON_UP && evt.press_type == LONG_PRESS) {
-				xTaskNotify(hrm_task,HRM_START,eSetValueWithOverwrite);
-				 current_applet = &applets[APPLET_HRM];
-			}
-
-
-			current_applet->handle_button_evt(&evt);
 		}
 
-		lcd_clear(BLACK);
-		if (current_applet->id==APPLET_WATCHFACE){
-			draw_statusbar(0);
-		}
-		else{
-			draw_statusbar(1);
-			backlight_on();
-		}
+		screen_manage();
 
-		current_applet->draw_applet();
-
-//		vTaskDelay(100);
-		vTaskDelayUntil( &xLastWakeTime, delay );
+		vTaskDelayUntil(&xLastWakeTime, delay);
 	}
 
 }
@@ -342,7 +322,7 @@ static void vibration_task_handler(void * arg){
 static void hrm_task_handler(void * arg) {
 
 	uint32_t command = 0;
-	pah8002_init(hrm_task);
+//	pah8002_init(hrm_task);
 
 	for (;;) {
 		pah8002_task();
@@ -361,7 +341,7 @@ static void hrm_task_handler(void * arg) {
 		}
 
 //		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-//		vTaskDelay(50);
+//		vTaskDelay(500);
 	}
 
 }
@@ -384,6 +364,8 @@ int main(void)
 
     // Initialize.
     APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
+    NVIC_SetPriority(FPU_IRQn, APP_IRQ_PRIORITY_LOW);
+    NVIC_EnableIRQ(FPU_IRQn);
 
     nrf_drv_gpiote_init();
     buttons_init();
@@ -401,12 +383,12 @@ int main(void)
     nrf_gfx_print(p_lcd, &text_start, PINK, "Pink", p_font, true);
     nrf_gfx_display(p_lcd);
 
-    uart_init();
+//    uart_init();
     battery_init();
     backlight_init();
     vibration_init();
 
-    printf("\r\nUART Start!\r\n");
+//    printf("\r\nUART Start!\r\n");
     ble_stack_init();
     gap_params_init();
     services_init();
@@ -415,16 +397,12 @@ int main(void)
 
     err_code = ble_advertising_start(BLE_ADV_MODE_SLOW);
     APP_ERROR_CHECK(err_code);
-    
-//    for (;;){
-//    __WFE();
-//    }
 
-    xTaskCreate(watchface_task_handler, "watchface", 256, NULL, 1, &watchface_task);
-    xTaskCreate(button_task_handler, "buttons", 128, NULL, 1, &button_task);
-    xTaskCreate(time_task_handler, "time", 128, NULL, 1, &time_task);
-    xTaskCreate(vibration_task_handler, "vibration", 128, NULL, 1, &vibration_task);
-    xTaskCreate(hrm_task_handler, "hrm", 256, NULL, 1, &hrm_task);
+    xTaskCreate(watchface_task_handler, "watchface", configMINIMAL_STACK_SIZE+128, NULL, 1, &watchface_task);
+    xTaskCreate(button_task_handler, "buttons", configMINIMAL_STACK_SIZE+32, NULL, 1, &button_task);
+    xTaskCreate(time_task_handler, "time", configMINIMAL_STACK_SIZE+32, NULL, 1, &time_task);
+    xTaskCreate(vibration_task_handler, "vibration", configMINIMAL_STACK_SIZE+32, NULL, 1, &vibration_task);
+    xTaskCreate(hrm_task_handler, "hrm", configMINIMAL_STACK_SIZE+128, NULL, 1, &hrm_task);
 
     vTaskStartScheduler();
 

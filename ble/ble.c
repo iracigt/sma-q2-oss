@@ -19,6 +19,8 @@
 #include "app_timer.h"
 #include "app_time.h"
 #include "status.h"
+#include "ble_protocol.h"
+#include "ble_watch_service.h"
 
 
 #define IS_SRVC_CHANGED_CHARACT_PRESENT 0                                           /**< Include the service_changed characteristic. If not enabled, the server's database cannot be changed for the lifetime of the device. */
@@ -45,9 +47,10 @@
 
 
 static ble_nus_t                        m_nus;                                      /**< Structure to identify the Nordic UART Service. */
+static ble_watchs_t                     m_watchs;
 static uint16_t                         m_conn_handle = BLE_CONN_HANDLE_INVALID;    /**< Handle of the current connection. */
-
 static ble_uuid_t                       m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};  /**< Universally unique service identifier. */
+//static ble_uuid_t                       m_adv_uuids[] = {{BLE_UUID_WATCH_SERVICE, BLE_UUID_TYPE_VENDOR_BEGIN}};  /**< Universally unique service identifier. */
 
 /**@brief Function for assert macro callback.
  *
@@ -108,14 +111,14 @@ void gap_params_init(void)
 /**@snippet [Handling the data received over BLE] */
 void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
 {
-    if (p_data[0]==0x01){
-    	uint32_t date;
-    	memcpy(&date,p_data+1,4);
-
-    	set_date(date);
-    }
+	ble_handle_message(p_data,length);
 }
 /**@snippet [Handling the data received over BLE] */
+
+void ble_send(uint8_t *data, uint16_t length){
+
+	ble_nus_string_send(&m_nus, data, length);
+}
 
 
 /**@brief Function for initializing services that will be used by the application.
@@ -131,6 +134,9 @@ void services_init(void)
 
     err_code = ble_nus_init(&m_nus, &nus_init);
     APP_ERROR_CHECK(err_code);
+
+//    err_code = ble_watchs_init(&m_watchs);
+//    APP_ERROR_CHECK(err_code);
 }
 
 

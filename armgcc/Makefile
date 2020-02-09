@@ -93,17 +93,45 @@ $(abspath ../hardware/vibration.c) \
 $(abspath ../hardware/pah8002.c) \
 $(abspath ../hardware/hrm.c) \
 $(abspath ../gfx/nrf_gfx.c) \
-$(abspath ../gfx/orkney24pts.c) \
-$(abspath ../gfx/orkney8pts.c) \
-$(abspath ../gfx/7seg32.c) \
+$(abspath ../gfx/fonts/orkney24pts.c) \
+$(abspath ../gfx/fonts/orkney8pts.c) \
+$(abspath ../gfx/fonts/7seg32.c) \
+$(abspath ../gfx/fonts/m1c_10b.c) \
+$(abspath ../gfx/fonts/m1c_10.c) \
+$(abspath ../gfx/fonts/m1c_10t.c) \
+$(abspath ../gfx/fonts/m1c_12b.c) \
+$(abspath ../gfx/fonts/m1c_12.c) \
+$(abspath ../gfx/fonts/m1c_12t.c) \
+$(abspath ../gfx/fonts/m1c_14b.c) \
+$(abspath ../gfx/fonts/m1c_14.c) \
+$(abspath ../gfx/fonts/m1c_14t.c) \
+$(abspath ../gfx/fonts/m1c_16b.c) \
+$(abspath ../gfx/fonts/m1c_16.c) \
+$(abspath ../gfx/fonts/m1c_18b.c) \
+$(abspath ../gfx/fonts/m1c_18.c) \
+$(abspath ../gfx/fonts/m1c_24b.c) \
+$(abspath ../gfx/fonts/m1mn_28.c) \
+$(abspath ../gfx/fonts/m1mn_32.c) \
+$(abspath ../gfx/fonts/m1mn_36.c) \
+$(abspath ../gfx/fonts/m1mn_48.c) \
 $(abspath ../gfx/icons.c) \
 $(abspath ../gfx/icon_data.c) \
+$(abspath ../gfx/weather_data.c) \
+$(abspath ../app/applets.c) \
+$(abspath ../app/app_menu.c) \
 $(abspath ../app/app_time.c) \
 $(abspath ../app/app_hrm.c) \
+$(abspath ../app/app_music.c) \
+$(abspath ../app/app_battery.c) \
 $(abspath ../app/watchface.c) \
 $(abspath ../app/status.c) \
+$(abspath ../app/screen_mgr.c) \
 $(abspath ../app/tetris.c) \
+$(abspath ../app/weather.c) \
 $(abspath ../ble/ble.c) \
+$(abspath ../ble/ble_protocol.c) \
+$(abspath ../ble/ble_watch_service.c) \
+$(abspath ../lib/utf8proc.c) \
 
 #assembly files common to all targets
 ASM_SOURCE_FILES  = $(abspath $(COMPONENTS)/toolchain/gcc/gcc_startup_nrf52.s)
@@ -114,6 +142,7 @@ INC_PATHS += -I$(abspath ../gfx)
 INC_PATHS += -I$(abspath ../hardware)
 INC_PATHS += -I$(abspath ../app)
 INC_PATHS += -I$(abspath ../ble)
+INC_PATHS += -I$(abspath ../lib)
 INC_PATHS += -I$(abspath ../freertos/include)
 INC_PATHS += -I$(abspath $(COMPONENTS)/drivers_nrf/config)
 #INC_PATHS += -I$(abspath $(NRF5_SDK_PATH)/examples/bsp)
