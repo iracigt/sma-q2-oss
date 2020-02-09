@@ -331,4 +331,6 @@ flash_softdevice:
 ## Generate .zip for DFU
 zip: application
 	nrfutil dfu genpkg --application $(OUTPUT_BINARY_DIRECTORY)/$<.hex --application-version 0xffffffff --dev-revision 0xffff --dev-type 0xffff --sd-req 136 app_dfu_package.zip
-	
+
+dfu: zip
+	../../nrf_bledfu_mac.app/Contents/MacOS/nrf_bledfu_mac update -z $(CURDIR)/app_dfu_package.zip -a 2E87ECCF-1F3F-4678-837F-777E53D4A849
