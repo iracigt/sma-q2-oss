@@ -27,6 +27,8 @@ void conn_params_init(void);
 void on_adv_evt(ble_adv_evt_t ble_adv_evt);
 void on_ble_evt(ble_evt_t * p_ble_evt);
 void ble_evt_dispatch(ble_evt_t * p_ble_evt);
+void device_manager_init(bool erase_bonds);
+void db_discovery_init(void);
 void ble_stack_init(void);
 void advertising_init(void);
 

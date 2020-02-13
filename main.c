@@ -41,7 +41,7 @@
 #include "hrm.h"
 #include "screen_mgr.h"
 
-#define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
+#define UART_TX_BUF_SIZE                4096                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
 
 static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
@@ -81,10 +81,41 @@ void battery_history_timer_callback( TimerHandle_t pxTimer ){
 
 }
 
+void uart_print_error(uint32_t id, uint32_t pc, uint32_t info)
+{
+    unsigned int tmp = id;
+    printf("uart_print_error():\r\n");
+    printf("Fault identifier:  0x%X\r\n", tmp);
+    printf("Program counter:   0x%X\r\n", tmp = pc);
+    printf("Fault information: 0x%X\r\n", tmp = info);
+
+    switch (id)
+    {
+        case NRF_FAULT_ID_SDK_ASSERT:
+            printf("Line Number: %u\r\n", tmp = ((assert_info_t *)(info))->line_num);
+            if (((assert_info_t *)(info))->p_file_name) {
+                printf("File Name:   0x%X\r\n",       ((assert_info_t *)(info))->p_file_name);
+            } else {
+                printf("File Name:   NULL\r\n");
+            }
+            break;
+
+        case NRF_FAULT_ID_SDK_ERROR:
+            printf("Line Number: %u\r\n",   tmp = ((error_info_t *)(info))->line_num);
+            if (((error_info_t *)(info))->p_file_name) {
+                printf("File Name:   0x%X\r\n",         ((error_info_t *)(info))->p_file_name);
+            } else {
+                printf("File Name:   NULL\r\n");
+            }
+            printf("Error Code:  0x%X\r\n", tmp = ((error_info_t *)(info))->err_code);
+            break;
+    }
+}
+
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info){
 
-//	app_error_print(id, pc, info);
-//	printf("fault\r\n");
+	uart_print_error(id, pc, info);
+    printf("fault\r\n");
 
 	lcd_clear(RED);
 
@@ -93,9 +124,17 @@ void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info){
 	snprintf(error,20,"F:%X,%X,%X",(unsigned int)id,(unsigned int)pc,(unsigned int)info);
     nrf_gfx_print(p_lcd, &text_start, WHITE, error, p_font, true);
 
-    text_start.y+=10;
+    text_start.y+=12;
     snprintf(error,20,"E:0x%X", (unsigned int)((error_info_t *)(info))->err_code);
     nrf_gfx_print(p_lcd, &text_start, WHITE, error, p_font, true);
+
+	// text_start.y+=12;
+    // snprintf(error,20,"%s:%d", ((error_info_t *)(info))->p_file_name, (unsigned int)((error_info_t *)(info))->line_num);
+    // nrf_gfx_print(p_lcd, &text_start, WHITE, error, p_font, true);
+
+	// text_start.y+=12;
+    // snprintf(error,20,"C:0x%X", (unsigned int)app_error_fault_handler);
+    // nrf_gfx_print(p_lcd, &text_start, WHITE, error, p_font, true);
 
     nrf_gfx_display(p_lcd);
 	while(1);
@@ -166,7 +205,7 @@ static void uart_init(void)
         CTS_PIN_NUMBER,
         APP_UART_FLOW_CONTROL_DISABLED,
         false,
-        UART_BAUDRATE_BAUDRATE_Baud115200
+        UART_BAUDRATE_BAUDRATE_Baud1M
     };
 
     APP_UART_FIFO_INIT( &comm_params,
@@ -383,19 +422,31 @@ int main(void)
     nrf_gfx_print(p_lcd, &text_start, PINK, "Pink", p_font, true);
     nrf_gfx_display(p_lcd);
 
-//    uart_init();
+    uart_init();
     battery_init();
     backlight_init();
     vibration_init();
 
-//    printf("\r\nUART Start!\r\n");
+    printf("\r\nUART Start!\r\n");
+    NRF_LOG_PRINTF("LOG ready\r\n");
+    printf("\r\nble_stack_init\r\n");
     ble_stack_init();
+    printf("\r\ndevice_manager_init\r\n");
+	device_manager_init(true);
+    nrf_delay_ms(100);
+    printf("\r\ndb_discovery_init\r\n");
+    db_discovery_init();
+    printf("\r\ngap_params_init\r\n");
     gap_params_init();
+    printf("\r\nservices_init\r\n");
     services_init();
+    printf("\r\nadvertising_init\r\n");
     advertising_init();
+    printf("\r\nconn_params_init\r\n");
     conn_params_init();
+    printf("\r\nble_advertising_start\r\n");
 
-    err_code = ble_advertising_start(BLE_ADV_MODE_SLOW);
+    err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
 
     xTaskCreate(watchface_task_handler, "watchface", configMINIMAL_STACK_SIZE+128, NULL, 1, &watchface_task);

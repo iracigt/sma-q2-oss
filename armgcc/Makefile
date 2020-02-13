@@ -67,10 +67,15 @@ $(abspath $(COMPONENTS)/drivers_nrf/wdt/nrf_drv_wdt.c) \
 $(abspath $(COMPONENTS)/drivers_nrf/pstorage/pstorage.c) \
 $(abspath $(COMPONENTS)/drivers_nrf/clock/nrf_drv_clock.c) \
 $(abspath ../main.c) \
+$(abspath $(COMPONENTS)/libraries/util/nrf_log.c) \
+$(abspath $(COMPONENTS)/libraries/trace/app_trace.c) \
 $(abspath $(COMPONENTS)/ble/common/ble_advdata.c) \
 $(abspath $(COMPONENTS)/ble/ble_advertising/ble_advertising.c) \
 $(abspath $(COMPONENTS)/ble/common/ble_conn_params.c) \
 $(abspath $(COMPONENTS)/ble/ble_services/ble_nus/ble_nus.c) \
+$(abspath $(COMPONENTS)/ble/ble_db_discovery/ble_db_discovery.c) \
+$(abspath $(COMPONENTS)/ble/device_manager/device_manager_peripheral.c) \
+$(abspath $(COMPONENTS)/ble/ble_services/ble_ancs_c/ble_ancs_c.c) \
 $(abspath $(COMPONENTS)/ble/common/ble_srv_common.c) \
 $(abspath $(COMPONENTS)/toolchain/system_nrf52.c) \
 $(abspath $(COMPONENTS)/softdevice/common/softdevice_handler/softdevice_handler.c) \
@@ -146,6 +151,7 @@ INC_PATHS += -I$(abspath ../lib)
 INC_PATHS += -I$(abspath ../freertos/include)
 INC_PATHS += -I$(abspath $(COMPONENTS)/drivers_nrf/config)
 #INC_PATHS += -I$(abspath $(NRF5_SDK_PATH)/examples/bsp)
+INC_PATHS += -I$(abspath $(COMPONENTS)/libraries/trace)
 INC_PATHS += -I$(abspath $(COMPONENTS)/libraries/timer)
 INC_PATHS += -I$(abspath $(COMPONENTS)/libraries/fifo)
 INC_PATHS += -I$(abspath $(COMPONENTS)/libraries/fstorage/config)
@@ -163,7 +169,11 @@ INC_PATHS += -I$(abspath $(COMPONENTS)/libraries/fstorage)
 INC_PATHS += -I$(abspath $(COMPONENTS)/libraries/experimental_section_vars)
 INC_PATHS += -I$(abspath $(COMPONENTS)/softdevice/s132/headers)
 INC_PATHS += -I$(abspath $(COMPONENTS)/drivers_nrf/gpiote)
+INC_PATHS += -I$(abspath $(COMPONENTS)/ble/device_manager)
+INC_PATHS += -I$(abspath $(COMPONENTS)/ble/device_manager/config)
+INC_PATHS += -I$(abspath $(COMPONENTS)/ble/ble_db_discovery)
 INC_PATHS += -I$(abspath $(COMPONENTS)/ble/ble_services/ble_nus)
+INC_PATHS += -I$(abspath $(COMPONENTS)/ble/ble_services/ble_ancs_c)
 INC_PATHS += -I$(abspath $(COMPONENTS)/toolchain/CMSIS/Include)
 INC_PATHS += -I$(abspath $(COMPONENTS)/drivers_nrf/hal)
 INC_PATHS += -I$(abspath $(COMPONENTS)/toolchain/gcc)
@@ -201,7 +211,9 @@ CFLAGS += -DNRF52_PAN_30
 CFLAGS += -DNRF52_PAN_51
 CFLAGS += -DNRF52_PAN_36
 CFLAGS += -DNRF52_PAN_53
-#CFLAGS += -DNRF_LOG_USES_UART=1
+CFLAGS += -DNRF_LOG_USES_UART=1
+CFLAGS += -DNRF_LOG_ENABLED=1
+CFLAGS += -DENABLE_DEBUG_LOG_SUPPORT=1
 CFLAGS += -DS132
 CFLAGS += -DCONFIG_GPIO_AS_PINRESET
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
@@ -246,7 +258,9 @@ ASMFLAGS += -DNRF52_PAN_30
 ASMFLAGS += -DNRF52_PAN_51
 ASMFLAGS += -DNRF52_PAN_36
 ASMFLAGS += -DNRF52_PAN_53
-#ASMFLAGS += -DNRF_LOG_USES_UART=1
+ASMFLAGS += -DNRF_LOG_USES_UART=1
+ASMFLAGS += -DNRF_LOG_ENABLED=1
+ASMFLAGS += -DENABLE_DEBUG_LOG_SUPPORT=1
 ASMFLAGS += -DS132
 ASMFLAGS += -DCONFIG_GPIO_AS_PINRESET
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
@@ -255,7 +269,7 @@ ASMFLAGS += -DNRF52_PAN_20
 ASMFLAGS += -DNRF52_PAN_64
 ASMFLAGS += -DNRF52_PAN_62
 ASMFLAGS += -DNRF52_PAN_63
-ASMFLAGS += -D__HEAP_SIZE=512
+ASMFLAGS += -D__HEAP_SIZE=8192
 ASMFLAGS += -DARM_MATH_CM4
 
 #LIBS = $(abspath ./pah8series.ar) 
