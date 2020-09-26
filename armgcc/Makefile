@@ -119,11 +119,13 @@ $(abspath ../gfx/fonts/m1mn_28.c) \
 $(abspath ../gfx/fonts/m1mn_32.c) \
 $(abspath ../gfx/fonts/m1mn_36.c) \
 $(abspath ../gfx/fonts/m1mn_48.c) \
+$(abspath ../gfx/fonts/scpm_56.c) \
 $(abspath ../gfx/icons.c) \
 $(abspath ../gfx/icon_data.c) \
 $(abspath ../gfx/weather_data.c) \
 $(abspath ../app/applets.c) \
 $(abspath ../app/app_menu.c) \
+$(abspath ../app/app_notification.c) \
 $(abspath ../app/app_time.c) \
 $(abspath ../app/app_hrm.c) \
 $(abspath ../app/app_music.c) \

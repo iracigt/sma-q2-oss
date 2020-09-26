@@ -9,7 +9,7 @@
 #define HARDWARE_BACKLIGHT_H_
 
 // Backlight intensity in PWM percent
-#define BACKLIGHT_INTENSITY 50
+#define BACKLIGHT_INTENSITY 75
 // Default backlight on time in ms
 #define BACKLIGHT_TIME 3000
 

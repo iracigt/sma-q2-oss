@@ -19,6 +19,7 @@
 #include "FreeRTOS.h"
 #include "app_timer.h"
 #include "app_time.h"
+#include "app_notification.h"
 #include "status.h"
 
 #include "ble_protocol.h"
@@ -38,7 +39,7 @@
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define ATTR_DATA_SIZE                  32                                          /**< Allocated size for attribute data. */
-#define MSG_ATTR_DATA_SIZE              256
+#define MSG_ATTR_DATA_SIZE              BLE_ANCS_ATTR_DATA_MAX
 
 #define APP_ADV_INTERVAL                640                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS      180                                         /**< The advertising timeout (in units of seconds). */
@@ -106,19 +107,20 @@ static const char * lit_attrid[BLE_ANCS_NB_OF_ATTRS] =
 };
 
 static ble_ancs_c_t              m_ancs_c;                                 /**< Structure used to identify the Apple Notification Service Client. */
+static uint8_t                   expected_number_of_attrs;
 static ble_db_discovery_t        m_ble_db_discovery;                       /**< Structure used to identify the DB Discovery module. */
 
 static dm_application_instance_t m_app_handle;                             /**< Application identifier allocated by the Device Manager. */
 static dm_handle_t               m_peer_handle;                            /**< Identifies the peer that is currently connected. */
 static ble_gap_sec_params_t      m_sec_param;                              /**< Security parameter for use in security requests. */
-TimerHandle_t seq_req_timer = NULL;                                        /**< Security request timer. The timer lets us start pairing request if one does not arrive from the Central. */
+// TimerHandle_t seq_req_timer = NULL;                                        /**< Security request timer. The timer lets us start pairing request if one does not arrive from the Central. */
 APP_TIMER_DEF(m_sec_req_timer_id);                                         /**< Security request timer. The timer lets us start pairing request if one does not arrive from the Central. */
 
 static ble_ancs_c_evt_notif_t m_notification_latest;                       /**< Local copy to keep track of the newest arriving notifications. */
 
 static uint8_t m_attr_title[ATTR_DATA_SIZE];                               /**< Buffer to store attribute data. */
 static uint8_t m_attr_subtitle[ATTR_DATA_SIZE];                            /**< Buffer to store attribute data. */
-static uint8_t m_attr_message[MSG_ATTR_DATA_SIZE];                             /**< Buffer to store attribute data. */
+static uint8_t m_attr_message[MSG_ATTR_DATA_SIZE];                         /**< Buffer to store attribute data. */
 static uint8_t m_attr_message_size[ATTR_DATA_SIZE];                        /**< Buffer to store attribute data. */
 static uint8_t m_attr_date[ATTR_DATA_SIZE];                                /**< Buffer to store attribute data. */
 static uint8_t m_attr_posaction[ATTR_DATA_SIZE];                           /**< Buffer to store attribute data. */
@@ -210,7 +212,7 @@ void ble_send(uint8_t *data, uint16_t length){
  */
 static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
 {
-    printf("ble_ancs_c_on_db_disc_evt\r\n");
+    // printf("ble_ancs_c_on_db_disc_evt\r\n");
     ble_ancs_c_on_db_disc_evt(&m_ancs_c, p_evt);
 }
 
@@ -260,7 +262,7 @@ static uint32_t device_manager_evt_handler(dm_handle_t const * p_handle,
 {
     uint32_t err_code;
 
-    printf("device_manager_evt_handler: 0x%X\r\n", p_evt->event_id);
+    // printf("device_manager_evt_handler: 0x%X\r\n", p_evt->event_id);
     switch (p_evt->event_id)
     {
         case DM_EVT_CONNECTION:
@@ -278,7 +280,8 @@ static uint32_t device_manager_evt_handler(dm_handle_t const * p_handle,
             APP_ERROR_CHECK(err_code);
             break; 
         case DM_EVT_SECURITY_SETUP_COMPLETE:
-            printf("DM_EVT_SECURITY_SETUP_COMPLETE\r\n");
+            // printf("DM_EVT_SECURITY_SETUP_COMPLETE\r\n");
+            break;
 
         default:
             break;
@@ -414,6 +417,30 @@ static void notif_attr_print(ble_ancs_c_evt_notif_attr_t * p_attr)
     }
 }
 
+static void on_got_evt_notif(ble_ancs_c_evt_notif_t * p_notif)
+{
+    uint32_t err_code;
+    err_code = ble_ancs_c_request_attrs(&m_ancs_c, &m_notification_latest);
+    APP_ERROR_CHECK(err_code);
+    expected_number_of_attrs = m_ancs_c.number_of_requested_attr;
+}
+
+static void on_got_evt_notif_attr(ble_ancs_c_evt_notif_attr_t * p_attr)
+{
+    if (p_attr->attr_id == BLE_ANCS_NOTIF_ATTR_ID_MESSAGE) {
+        notification_set_message(p_attr->p_attr_data);
+    } else if (p_attr->attr_id == BLE_ANCS_NOTIF_ATTR_ID_TITLE) {
+        notification_set_app(p_attr->p_attr_data);
+    }
+
+    if (--expected_number_of_attrs == 0) {
+        notification_show();
+    }
+}
+
+
+
+
 /**@brief Function for handling the Apple Notification Service client.
  *
  * @details This function is called for all events in the Apple Notification client that
@@ -425,7 +452,7 @@ static void on_ancs_c_evt(ble_ancs_c_evt_t * p_evt)
 {
     uint32_t err_code = NRF_SUCCESS;
 
-    printf("on_ancs_c_evt: 0x%X\r\n", p_evt->evt_type);
+    // printf("on_ancs_c_evt: 0x%X\r\n", p_evt->evt_type);
     switch (p_evt->evt_type)
     {
         case BLE_ANCS_C_EVT_DISCOVERY_COMPLETE:
@@ -438,12 +465,13 @@ static void on_ancs_c_evt(ble_ancs_c_evt_t * p_evt)
         case BLE_ANCS_C_EVT_NOTIF:
             m_notification_latest = p_evt->notif;
             notif_print(&m_notification_latest);
-            err_code = ble_ancs_c_request_attrs(&m_ancs_c, &m_notification_latest);
-            APP_ERROR_CHECK(err_code);
+            on_got_evt_notif(&m_notification_latest);
             break;
 
         case BLE_ANCS_C_EVT_NOTIF_ATTRIBUTE:
+            printf("expected_number_of_attrs = %d\r\n", expected_number_of_attrs);
             notif_attr_print(&p_evt->attr);
+            on_got_evt_notif_attr(&p_evt->attr);
             break;
 
         case BLE_ANCS_C_EVT_DISCOVERY_FAILED:
@@ -471,11 +499,11 @@ static void ancs_init(void)
                                    ATTR_DATA_SIZE);
     APP_ERROR_CHECK(err_code);
     
-    err_code = ble_ancs_c_attr_add(&m_ancs_c,
-                                   BLE_ANCS_NOTIF_ATTR_ID_SUBTITLE,
-                                   m_attr_subtitle,
-                                   ATTR_DATA_SIZE);
-    APP_ERROR_CHECK(err_code);
+    // err_code = ble_ancs_c_attr_add(&m_ancs_c,
+    //                                BLE_ANCS_NOTIF_ATTR_ID_SUBTITLE,
+    //                                m_attr_subtitle,
+    //                                ATTR_DATA_SIZE);
+    // APP_ERROR_CHECK(err_code);
 
     err_code = ble_ancs_c_attr_add(&m_ancs_c,
                                    BLE_ANCS_NOTIF_ATTR_ID_MESSAGE,
@@ -483,11 +511,11 @@ static void ancs_init(void)
                                    MSG_ATTR_DATA_SIZE);
     APP_ERROR_CHECK(err_code);
 
-    err_code = ble_ancs_c_attr_add(&m_ancs_c,
-                                   BLE_ANCS_NOTIF_ATTR_ID_MESSAGE_SIZE,
-                                   m_attr_message_size,
-                                   ATTR_DATA_SIZE);
-    APP_ERROR_CHECK(err_code);
+    // err_code = ble_ancs_c_attr_add(&m_ancs_c,
+    //                                BLE_ANCS_NOTIF_ATTR_ID_MESSAGE_SIZE,
+    //                                m_attr_message_size,
+    //                                ATTR_DATA_SIZE);
+    // APP_ERROR_CHECK(err_code);
 
     err_code = ble_ancs_c_attr_add(&m_ancs_c,
                                    BLE_ANCS_NOTIF_ATTR_ID_DATE,
@@ -495,22 +523,22 @@ static void ancs_init(void)
                                    ATTR_DATA_SIZE);
     APP_ERROR_CHECK(err_code);
 
-    err_code = ble_ancs_c_attr_add(&m_ancs_c,
-                                   BLE_ANCS_NOTIF_ATTR_ID_POSITIVE_ACTION_LABEL,
-                                   m_attr_posaction,
-                                   ATTR_DATA_SIZE);
-    APP_ERROR_CHECK(err_code);
+    // err_code = ble_ancs_c_attr_add(&m_ancs_c,
+    //                                BLE_ANCS_NOTIF_ATTR_ID_POSITIVE_ACTION_LABEL,
+    //                                m_attr_posaction,
+    //                                ATTR_DATA_SIZE);
+    // APP_ERROR_CHECK(err_code);
 
-    err_code = ble_ancs_c_attr_add(&m_ancs_c,
-                                   BLE_ANCS_NOTIF_ATTR_ID_NEGATIVE_ACTION_LABEL,
-                                   m_attr_negaction,
-                                   ATTR_DATA_SIZE);
-    APP_ERROR_CHECK(err_code);
+    // err_code = ble_ancs_c_attr_add(&m_ancs_c,
+    //                                BLE_ANCS_NOTIF_ATTR_ID_NEGATIVE_ACTION_LABEL,
+    //                                m_attr_negaction,
+    //                                ATTR_DATA_SIZE);
+    // APP_ERROR_CHECK(err_code);
 
     ancs_init_obj.evt_handler   = on_ancs_c_evt;
     ancs_init_obj.error_handler = apple_notification_error_handler;
 
-    printf("ble_ancs_c_init\r\n");
+    // printf("ble_ancs_c_init\r\n");
     nrf_delay_ms(500);
     err_code = ble_ancs_c_init(&m_ancs_c, &ancs_init_obj);
     APP_ERROR_CHECK(err_code);
@@ -550,7 +578,7 @@ void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     uint32_t err_code;
 
-    printf("on_conn_params_evt: %d\r\n", p_evt->evt_type);
+    // printf("on_conn_params_evt: %d\r\n", p_evt->evt_type);
     if(p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
@@ -657,18 +685,6 @@ void on_ble_evt(ble_evt_t * p_ble_evt)
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             break;
 
-        // case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
-        //     // Pairing not supported
-        //     err_code = sd_ble_gap_sec_params_reply(m_conn_handle, BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP, NULL, NULL);
-        //     APP_ERROR_CHECK(err_code);
-        //     break;
-
-        // case BLE_GATTS_EVT_SYS_ATTR_MISSING:
-        //     // No system attributes have been stored.
-        //     err_code = sd_ble_gatts_sys_attr_set(m_conn_handle, NULL, 0, 0);
-        //     APP_ERROR_CHECK(err_code);
-        //     break;
-
         default:
             // No implementation needed.
             break;
@@ -700,7 +716,7 @@ static void sys_evt_dispatch(uint32_t sys_evt)
  */
 void ble_evt_dispatch(ble_evt_t * p_ble_evt)
 {
-    printf("EVT: %d (0x%X)\r\n", p_ble_evt->header.evt_id, p_ble_evt->header.evt_id);
+    // printf("EVT: %d (0x%X)\r\n", p_ble_evt->header.evt_id, p_ble_evt->header.evt_id);
     dm_ble_evt_handler(p_ble_evt);
     ble_db_discovery_on_ble_evt(&m_ble_db_discovery, p_ble_evt);
     ble_conn_params_on_ble_evt(p_ble_evt);

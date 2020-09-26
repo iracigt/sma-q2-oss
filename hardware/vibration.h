@@ -31,5 +31,6 @@ void vibration_init(void);
 void vibration_step(void);
 void vibration_set_pattern(vibration_pattern_t pattern);
 void vibration_short(void);
+void vibration_alert(void);
 
 #endif /* HARDWARE_VIBRATION_H_ */

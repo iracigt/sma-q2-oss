@@ -52,6 +52,7 @@ extern const nrf_gfx_font_desc_t m1c_24ptFontInfo;
 extern const nrf_gfx_font_desc_t m1mn_32ptFontInfo;
 extern const nrf_gfx_font_desc_t m1mn_36ptFontInfo;
 extern const nrf_gfx_font_desc_t m1mn_48ptFontInfo;
+extern const nrf_gfx_font_desc_t sourceCodePro_56ptFontInfo;
 
 extern const nrf_lcd_t nrf_lcd_lpm013m126a;
 

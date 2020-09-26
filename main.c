@@ -44,7 +44,8 @@
 #define UART_TX_BUF_SIZE                4096                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
 
-static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
+// static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
+static const nrf_gfx_font_desc_t * p_font = &orkney_24ptFontInfo;
 static const nrf_lcd_t * p_lcd = &nrf_lcd_lpm013m126a;
 
 
@@ -400,6 +401,7 @@ void FPU_IRQHandler(void)
 int main(void)
 {
     uint32_t err_code;
+    bool erase_bonds = false;
 
     // Initialize.
     APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
@@ -409,22 +411,27 @@ int main(void)
     nrf_drv_gpiote_init();
     buttons_init();
 
+    if (!nrf_drv_gpiote_in_is_set(BUTTON_BACK_PIN)) {
+        erase_bonds = true;
+    }
+
     nrf_gfx_init(p_lcd);
 
     lcd_clear(CYAN);
     nrf_gfx_point_t text_start = NRF_GFX_POINT(5, 10);
     nrf_gfx_print(p_lcd, &text_start, WHITE, "SMA-Q2-OSS", p_font, true);
     text_start.y +=p_font->height;
-    nrf_gfx_print(p_lcd, &text_start, BLUE, "Blue", p_font, true);
-    text_start.y +=p_font->height;
-    nrf_gfx_print(p_lcd, &text_start, YELLOW, "Yellow", p_font, true);
-    text_start.y +=p_font->height;
-    nrf_gfx_print(p_lcd, &text_start, PINK, "Pink", p_font, true);
+    if (erase_bonds) {
+        nrf_gfx_print(p_lcd, &text_start, RED, "ERASING BONDS...", p_font, true);
+        text_start.y +=p_font->height;
+    }
+
     nrf_gfx_display(p_lcd);
 
     uart_init();
     battery_init();
     backlight_init();
+    backlight_on();
     vibration_init();
 
     printf("\r\nUART Start!\r\n");
@@ -432,7 +439,7 @@ int main(void)
     printf("\r\nble_stack_init\r\n");
     ble_stack_init();
     printf("\r\ndevice_manager_init\r\n");
-	device_manager_init(true);
+	device_manager_init(erase_bonds);
     nrf_delay_ms(100);
     printf("\r\ndb_discovery_init\r\n");
     db_discovery_init();

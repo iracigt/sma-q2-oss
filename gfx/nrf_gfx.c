@@ -674,6 +674,113 @@ ret_code_t nrf_gfx_print_box_utf8(nrf_lcd_t const * p_instance,
     return NRF_SUCCESS;
 }
 
+int nrf_gfx_flow_text(nrf_lcd_t const *lcd, nrf_gfx_rect_t const *bbox, uint16_t color, nrf_gfx_font_desc_t const *font, char const *string)
+{
+    return nrf_gfx_flow_text_len(lcd, bbox, color, font, string, strlen(string));
+}
+
+int nrf_gfx_flow_text_len(nrf_lcd_t const *lcd, nrf_gfx_rect_t const *bbox, uint16_t color, nrf_gfx_font_desc_t const *font, char const *string, int len)
+{
+    int begin_word = 0;
+    int word_width = 0;
+    bool start_line = true;
+    int i = 0;
+    
+    uint16_t x = bbox->x;
+    uint16_t y = bbox->y;
+
+    const int x_bound = bbox->x + bbox->width;
+    const int h_width = font->charInfo['-' - font->startChar].widthBits;
+    const int intra_line_space = 2;
+    const int space_width = font->height / 4;
+    const int hyphen_thresh = 75;
+
+    while (i < len) {
+
+        if (y > bbox->y + bbox->height) {
+            // Stop. We overflowed the box
+            return i;
+        }
+
+        char c = string[i];
+
+        if (c == '\n') {
+            // Write out prev word
+            for (int j = begin_word; j < i; j++) {
+                write_character(lcd, font, string[j], &x, y, color);
+            }
+            
+            // New line
+            x = bbox->x;
+            y += font->height + intra_line_space;
+            start_line = true;
+
+            i++;
+            begin_word = i;
+            word_width = 0;
+        } else if (c == ' ') {
+            
+            // Write out prev word
+            for (int j = begin_word; j < i; j++) {
+                write_character(lcd, font, string[j], &x, y, color);
+                start_line = false;
+            }
+
+            if (!start_line) {
+                x += space_width;
+                if (x > x_bound){
+                    // New line
+                    x = bbox->x;
+                    y += font->height + intra_line_space;
+                    start_line = true;
+                }
+            }
+
+            i++;
+            begin_word = i;
+            word_width = 0;
+
+        } else {
+            const int c_width = font->charInfo[c - font->startChar].widthBits + font->spacePixels;
+
+            word_width += c_width;
+
+            if (x + word_width - font->spacePixels > x_bound) {
+
+                if (word_width > hyphen_thresh) {
+                    // Fill in as much as possible
+                    while (x + h_width < x_bound) {
+                        write_character(lcd, font, string[begin_word], &x, y, color);
+                        begin_word++;
+                    }
+
+                    write_character(lcd, font, '-', &x, y, color);
+
+                    // Recompute remaining word width
+                    word_width = 0;
+                    for (int j = begin_word; j < i; j++) {
+                        word_width += font->charInfo[c - font->startChar].widthBits + font->spacePixels;
+                    }
+                }
+
+                // New line
+                x = bbox->x;
+                y += font->height + intra_line_space;
+                start_line = true;
+            }
+
+            i++;
+        }
+    }
+
+    // Write out last word
+    for (int j = begin_word; j < i; j++) {
+        write_character(lcd, font, string[j], &x, y, color);
+    }
+
+    return i;
+}
+
 uint16_t nrf_gfx_height_get(nrf_lcd_t const * p_instance)
 {
     ASSERT(p_instance != NULL);

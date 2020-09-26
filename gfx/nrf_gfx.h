@@ -305,6 +305,9 @@ ret_code_t nrf_gfx_print_box_utf8(nrf_lcd_t const * p_instance,
                          const nrf_gfx_font_desc_t * p_font,
                          bool wrap);
 
+int nrf_gfx_flow_text(nrf_lcd_t const *lcd, nrf_gfx_rect_t const *bbox, uint16_t color, nrf_gfx_font_desc_t const *font, char const *string);
+int nrf_gfx_flow_text_len(nrf_lcd_t const *lcd, nrf_gfx_rect_t const *bbox, uint16_t color, nrf_gfx_font_desc_t const *font, char const *string, int len);
+
 /**
  * @brief Function for getting the height of the screen.
  *

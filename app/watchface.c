@@ -14,7 +14,9 @@
 #include "screen_mgr.h"
 
 static const nrf_gfx_font_desc_t * p_font = &m1cthin_12ptFontInfo;
-static const nrf_gfx_font_desc_t * p_digit_font = &m1mn_48ptFontInfo;
+// static const nrf_gfx_font_desc_t * p_digit_font = &m1mn_48ptFontInfo;
+static const nrf_gfx_font_desc_t * p_digit_font = &sourceCodePro_56ptFontInfo;
+static const nrf_gfx_font_desc_t * p_day_font = &m1c_14ptbFontInfo;
 static const nrf_gfx_font_desc_t * p_weather_font = &m1c_18ptbFontInfo;
 static const nrf_gfx_font_desc_t * p_weather_font_small = &m1c_14ptbFontInfo;
 static const nrf_lcd_t * p_lcd = &nrf_lcd_lpm013m126a;
@@ -37,8 +39,8 @@ void watchface_process(void){
 void watchface_draw(void) {
 	lcd_clear(WHITE);
 
-	nrf_gfx_point_t digits_start = NRF_GFX_POINT(32,30);
-	nrf_gfx_point_t date_start = NRF_GFX_POINT(32,90);
+	nrf_gfx_point_t digits_start = NRF_GFX_POINT(11,30);
+	nrf_gfx_point_t date_start = NRF_GFX_POINT(24,90);
 
 	snprintf(time_str, sizeof(time_str), "%02d:%02d", time_date.tm_hour,
 			time_date.tm_min);
@@ -46,25 +48,26 @@ void watchface_draw(void) {
 
 //    asctime_r(&time_date,time_str);
 //    sprintf(time_str,"%u\n%u", (uint)current_time, (uint)ticks_acc);
-	strftime(time_str, sizeof(time_str), "%a %d.%m.%Y", &time_date);
-	nrf_gfx_print(p_lcd, &date_start, BLACK, time_str, p_font, true);
+	strftime(time_str, sizeof(time_str), "%a %m/%d/%y", &time_date);
+	nrf_gfx_print(p_lcd, &date_start, BLACK, time_str, p_day_font, true);
 
 	nrf_gfx_rect_t weather_bg=NRF_GFX_RECT(0,120,LCD_WIDTH,76);
 	nrf_gfx_rect_draw(p_lcd,&weather_bg,0,BLACK,true);
 
-	nrf_gfx_point_t temperature_start = NRF_GFX_POINT(64,128);
-	nrf_gfx_point_t temperature_max_start = NRF_GFX_POINT(120,124);
-	nrf_gfx_point_t temperature_min_start = NRF_GFX_POINT(120,146);
+	// TODO: Weather
+	// nrf_gfx_point_t temperature_start = NRF_GFX_POINT(64,128);
+	// nrf_gfx_point_t temperature_max_start = NRF_GFX_POINT(120,124);
+	// nrf_gfx_point_t temperature_min_start = NRF_GFX_POINT(120,146);
 
-	lcd_draw_icon(24, 128, weather_icons[WEATHER_SUN_CLOUD]);
+	// lcd_draw_icon(24, 128, weather_icons[WEATHER_SUN_CLOUD]);
 
-	snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature);
-	nrf_gfx_print(p_lcd, &temperature_start, WHITE, time_str, p_weather_font, true);
+	// snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature);
+	// nrf_gfx_print(p_lcd, &temperature_start, WHITE, time_str, p_weather_font, true);
 
-	snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature_max);
-	nrf_gfx_print(p_lcd, &temperature_max_start, WHITE, time_str, p_weather_font_small, true);
-	snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature_min);
-	nrf_gfx_print(p_lcd, &temperature_min_start, WHITE, time_str, p_weather_font_small, true);
+	// snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature_max);
+	// nrf_gfx_print(p_lcd, &temperature_max_start, WHITE, time_str, p_weather_font_small, true);
+	// snprintf(time_str, sizeof(time_str), "%d\xB0",weather_current.temperature_min);
+	// nrf_gfx_print(p_lcd, &temperature_min_start, WHITE, time_str, p_weather_font_small, true);
 
 //	nrf_gfx_display(p_lcd);
 }
