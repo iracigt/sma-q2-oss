@@ -42,8 +42,12 @@ void watchface_draw(void) {
 	nrf_gfx_point_t digits_start = NRF_GFX_POINT(11,30);
 	nrf_gfx_point_t date_start = NRF_GFX_POINT(24,90);
 
-	snprintf(time_str, sizeof(time_str), "%02d:%02d", time_date.tm_hour,
-			time_date.tm_min);
+	// snprintf(time_str, sizeof(time_str), "%02d:%02d", time_date.tm_hour,
+			// time_date.tm_min);
+	strftime(time_str, sizeof(time_str), "%I:%M", &time_date);
+	// if (time_str[0] == '0') {
+	// 	time_str[0] = ' ';
+	// }
 	nrf_gfx_print(p_lcd, &digits_start, BLACK, time_str, p_digit_font, true);
 
 //    asctime_r(&time_date,time_str);

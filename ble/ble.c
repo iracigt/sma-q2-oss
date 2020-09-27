@@ -431,6 +431,42 @@ static void on_got_evt_notif_attr(ble_ancs_c_evt_notif_attr_t * p_attr)
         notification_set_message(p_attr->p_attr_data);
     } else if (p_attr->attr_id == BLE_ANCS_NOTIF_ATTR_ID_TITLE) {
         notification_set_app(p_attr->p_attr_data);
+    } else if (p_attr->attr_id == BLE_ANCS_NOTIF_ATTR_ID_DATE) {
+        //notification_set_time(p_attr->p_attr_data);
+        
+        // Update the time if later
+        struct tm tm;
+        memset(&tm, '\0', sizeof(tm));
+
+
+        // Parse time from UTS 35 format yyyyMMdd'T'HHmmSS
+        // This is dumb because the nrf52 strptime gets confused by the lack
+        // of separators between year and month/day
+        // strptime(p_attr->p_attr_data+4, "%m%dT%H%M%S", &tm);
+
+        sscanf(p_attr->p_attr_data+4, "%2d%2dT%2d%2d%2d", &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+        tm.tm_mon -= 1; // Month tm_mon is in range 0-11 not 1-12 as normal
+        p_attr->p_attr_data[4] = '\0'; // Now parse just the year
+        strptime(p_attr->p_attr_data, "%Y", &tm);
+        
+        // printf("DAY = %u\r\n", tm.tm_mday);
+        // printf("MONTH = %u\r\n", tm.tm_mon);
+        // printf("YEAR = %u\r\n", tm.tm_year + 1900);
+
+        // printf("HOUR = %u\r\n", tm.tm_hour);
+        // printf("MIN = %u\r\n", tm.tm_min);
+        // printf("SEC = %u\r\n", tm.tm_sec);
+
+        // Compare time to current time
+        time_t now = get_date();
+        time_t notif = mktime(&tm);
+        // printf("TIME = %lu\r\n", notif);
+        double diffSecs = difftime(notif, now);
+        
+        // Update if later
+        if (diffSecs > 0) {
+            set_date(notif);
+        }
     }
 
     if (--expected_number_of_attrs == 0) {

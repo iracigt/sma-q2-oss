@@ -46,3 +46,9 @@ void set_date(time_t date){
 	current_time=date;
 
 }
+
+time_t get_date(){
+
+	return current_time;
+
+}

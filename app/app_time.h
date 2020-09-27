@@ -19,6 +19,7 @@ extern uint32_t ticks_acc;
 extern struct tm time_date;
 void time_handler(TickType_t ticks);
 void set_date(time_t date);
+time_t get_date();
 
 
 #endif /* APP_APP_TIME_H_ */
