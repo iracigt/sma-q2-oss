@@ -7,12 +7,16 @@
 
 #include <stdint.h>
 
+#include "app_time.h"
 #include "app_notification.h"
 #include "screen_mgr.h"
+#include "backlight.h"
+#include "vibration.h"
 
 #define NOTIF_APP_TITLE_LEN 16
 #define NOTIF_MESSAGE_LEN 256
 #define NOTIF_TITLE_BAR_HEIGHT 20
+#define NOTIF_DISPLAY_TIME_SEC 30
 
 static const nrf_gfx_font_desc_t * p_title_font = &m1c_14ptbFontInfo;
 static const nrf_gfx_font_desc_t * p_body_font = &m1c_10ptFontInfo;
@@ -21,13 +25,14 @@ static const nrf_lcd_t * p_lcd = &nrf_lcd_lpm013m126a;
 static uint8_t notif_title_fg_color = WHITE;
 static uint8_t notif_title_bg_color = BLUE;
 static uint8_t notif_icon = ICON_BLUETOOTH;
+static time_t notif_expiration_time = 0;
 
 static char notif_app_title[NOTIF_APP_TITLE_LEN+1] = {0};
 static char notif_message[NOTIF_MESSAGE_LEN+1] = {0};
 
 static const app_theme_t app_themes[] = {
 	// {"IFTTT", ICON_PLAY, WHITE, BLACK},
-	{NULL, ICON_BLUETOOTH, WHITE, BLUE},
+	{NULL, ICON_BLUETOOTH, WHITE, GREEN},
 };
 
 
@@ -53,13 +58,19 @@ void notification_set_app(char *app_title)
 }
 
 void notification_show() {
+	notif_expiration_time = current_time + NOTIF_DISPLAY_TIME_SEC;
+	printf("CUR_TIME: %lld\n DISMISS AT: %lld\n", current_time, notif_expiration_time);
 	screen_switch(APPLET_NOTIFICATION);
+	backlight_on();
 	vibration_alert();
 }
 
 
 void notification_process(void){
-
+	if (current_time >= notif_expiration_time) {
+		printf("%lld >= %lld\n", current_time, notif_expiration_time);
+		screen_return();
+	}
 }
 
 void notification_draw(void){
